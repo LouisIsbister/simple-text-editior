@@ -1,6 +1,6 @@
 
 pub struct EBuffer {
-    lines: Vec<Line>,
+    lines: Vec<String>,
     cx: usize,
     cy: usize,
 }
@@ -10,13 +10,13 @@ impl EBuffer {
     /// Creates a clean text buffer
     pub fn new() -> Self {
         Self { 
-            lines: vec![Line::new()],
+            lines: vec![String::new()],
             cx: 0,
             cy: 0,
         }
     }
 
-    pub fn lines(&self) -> &Vec<Line> {
+    pub fn lines(&self) -> &Vec<String> {
         &self.lines
     }
 
@@ -34,12 +34,12 @@ impl EBuffer {
     /// half on a new line.
     pub fn insert_empty_line(&mut self) {
         if self.cy < self.lines.len() - 1 {
-            let current_line = self.lines.remove(self.cy).buffer;
+            let current_line = self.lines.remove(self.cy);
             let (before_cursor, after_cursor) = current_line.split_at(self.cx);
-            self.lines.insert(self.cy, Line::from(before_cursor));
-            self.lines.insert(self.cy + 1, Line::from(after_cursor));
+            self.lines.insert(self.cy, before_cursor.to_string());
+            self.lines.insert(self.cy + 1, after_cursor.to_string());
         } else {
-            self.lines.push(Line::new());
+            self.lines.push(String::new());
         }
         self.cx = 0;
         self.cy += 1;
@@ -48,7 +48,7 @@ impl EBuffer {
     /// inserts the pressed character at the current cursor positon.
     pub fn insert_char(&mut self, ch: char) { 
         if self.cy < self.lines.len() {
-            self.lines[self.cy].buffer.insert(self.cx, ch);
+            self.lines[self.cy].insert(self.cx, ch);
             self.cx += 1
         }
     }
@@ -64,15 +64,15 @@ impl EBuffer {
             if self.cy == 0 {
                 return
             }
-            let cur_line_buffer = self.lines.remove(self.cy).buffer;
+            let cur_line_buffer = self.lines.remove(self.cy);
             let prev_line = &mut self.lines[self.cy - 1];
 
             self.cy -= 1;
             self.cx = prev_line.len();
 
-            prev_line.append_str(&cur_line_buffer);
+            prev_line.push_str(&cur_line_buffer);
         } else {
-            self.lines[self.cy].buffer.remove(self.cx - 1);
+            self.lines[self.cy].remove(self.cx - 1);
             self.cx -= 1
         }
     }
@@ -88,17 +88,17 @@ impl EBuffer {
                 return
             }
 
-            let next_line_buffer = self.lines.remove(self.cy + 1).buffer;
-            self.lines[self.cy].append_str(&next_line_buffer);
+            let next_line_buffer = self.lines.remove(self.cy + 1);
+            self.lines[self.cy].push_str(&next_line_buffer);
         } else {
-            self.lines[self.cy].buffer.remove(self.cx);
+            self.lines[self.cy].remove(self.cx);
         }
     }
 
     pub fn move_cursor_up(&mut self) {
         if self.cy > 0 {
             self.cy -= 1;
-            let new_line_buffer = &self.lines[self.cy].buffer;
+            let new_line_buffer = &self.lines[self.cy];
 
             // only update x if the prev line is longer than the newline
             if self.cx > new_line_buffer.len() {
@@ -110,7 +110,7 @@ impl EBuffer {
     pub fn move_cursor_down(&mut self) {
         if self.cy < self.lines.len() - 1 {
             self.cy += 1;
-            let new_line_buffer = &self.lines[self.cy].buffer;
+            let new_line_buffer = &self.lines[self.cy];
             // only update x if the prev line is longer than the newline
             if self.cx > new_line_buffer.len() {
                 self.cx = new_line_buffer.len()
@@ -124,52 +124,18 @@ impl EBuffer {
         } else if self.cx == 0 && self.cy > 0 { 
             // wrap the cursor to the end of the prev line
             self.cy -= 1;
-            self.cx = self.lines[self.cy].buffer.len()
+            self.cx = self.lines[self.cy].len()
         }
     }
 
     pub fn move_cursor_right(&mut self) {
-        if self.cx < self.lines[self.cy].buffer.len() {
+        if self.cx < self.lines[self.cy].len() {
             self.cx += 1;
-        } else if self.cx == self.lines[self.cy].buffer.len() && self.cy < self.lines.len() - 1 {
+        } else if self.cx == self.lines[self.cy].len() && self.cy < self.lines.len() - 1 {
             // wrap the cursor to the start of the next line
             self.cy += 1;
             self.cx = 0
         }
-    }
-
-}
-
-
-#[derive(Debug)]
-pub struct Line {
-    buffer: String
-}
-
-impl Line {
-    pub fn new() -> Self {
-        Self { 
-            buffer: String::new() 
-        }
-    }
-
-    pub fn from(s: &str) -> Self {
-        Self {
-            buffer: String::from(s)
-        }
-    }
-
-    pub fn buffer(&self) -> &String {
-        &self.buffer
-    }
-
-
-    pub fn append_str(&mut self, str: &String) {
-        self.buffer.push_str(str);
-    }
-
-    pub fn len(&self) -> usize {
-        self.buffer.len()
     }
 
 }

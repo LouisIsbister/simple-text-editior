@@ -108,12 +108,12 @@ impl Editor {
         let content = buffer.lines()
             .iter()
             .enumerate()
-            .map(|(idx, l)| {
+            .map(|(idx, lbuff)| {
                 let mut idx_as_str = (idx + 1).to_string();
                 let space_count = 5 - idx_as_str.len();
                 idx_as_str.push_str(" ".repeat(space_count).as_str());
     
-                idx_as_str.push_str(&l.buffer());
+                idx_as_str.push_str(&lbuff);
                 idx_as_str
             })
             .collect::<Vec<String>>()
