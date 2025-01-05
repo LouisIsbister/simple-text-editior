@@ -1,11 +1,11 @@
 
-pub struct Buffer {
+pub struct EBuffer {
     lines: Vec<Line>,
     cx: usize,
     cy: usize,
 }
 
-impl Buffer {
+impl EBuffer {
 
     /// Creates a clean text buffer
     pub fn new() -> Self {
