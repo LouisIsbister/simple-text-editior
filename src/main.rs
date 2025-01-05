@@ -3,12 +3,11 @@ mod editor_buffer;
 use editor_buffer::Buffer;
 
 use crossterm::{
-    execute,
     event::{
         self, Event, 
-        KeyCode, KeyEvent, KeyEventKind
-    }, terminal::{
-        disable_raw_mode, 
+        KeyCode, KeyEvent, KeyEventKind, KeyModifiers
+    }, execute, terminal::{
+        disable_raw_mode,
         enable_raw_mode,
         DisableLineWrap, EnableLineWrap, 
         EnterAlternateScreen, LeaveAlternateScreen
@@ -35,6 +34,7 @@ fn main() -> crossterm::Result<()> {
     enable_raw_mode()?;
     execute!(&stdout, EnterAlternateScreen, DisableLineWrap)?;
     
+    
     let backend = CrosstermBackend::new(&stdout);
     let mut terminal = Terminal::new(backend)?;
 
@@ -59,7 +59,7 @@ fn main() -> crossterm::Result<()> {
             frame.render_widget(editor, chunks[0]);
 
             // Render status bar
-            let status = Paragraph::new("Press 'q' to quit")
+            let status = Paragraph::new("Press 'ALT + Backspace' to quit")
                 .block(Block::default().borders(Borders::ALL));
             frame.render_widget(status, chunks[1]);
 
@@ -73,6 +73,41 @@ fn main() -> crossterm::Result<()> {
     Ok(())
 }
 
+fn handle_input(buffer: &mut Buffer) -> Result<bool, std::io::Error> {
+    if event::poll(std::time::Duration::from_millis(100))? {
+        if let Event::Key(key_event) = event::read()? {
+            if key_event.kind == KeyEventKind::Press {
+                return key_handler(buffer, &key_event);
+            }
+        }
+    }
+    Ok(true)
+}
+
+fn key_handler(buffer: &mut Buffer, event: &KeyEvent) -> Result<bool, std::io::Error> {
+    match (event.code, event.modifiers) {
+        // return Err(Error::new(io::ErrorKind::Interrupted, "Quit editor!"));
+        (KeyCode::Backspace, KeyModifiers::ALT) => return Ok(false),
+        
+        (KeyCode::Char(ch), key_mod) => {
+            match key_mod {
+                KeyModifiers::NONE => buffer.insert_char(ch),
+                KeyModifiers::SHIFT => buffer.insert_char(ch.to_ascii_uppercase()),
+                _ => () // invalid modifier
+            }
+        },
+
+        (KeyCode::Enter, KeyModifiers::NONE) => buffer.insert_empty_line(),
+        (KeyCode::Backspace, KeyModifiers::NONE) => buffer.rm_char_backspace(),
+        (KeyCode::Delete, KeyModifiers::NONE) => buffer.rm_char_delete(),
+        (KeyCode::Up, KeyModifiers::NONE) => buffer.move_cursor_up(),
+        (KeyCode::Down, KeyModifiers::NONE) => buffer.move_cursor_down(),
+        (KeyCode::Left, KeyModifiers::NONE) => buffer.move_cursor_left(),
+        (KeyCode::Right, KeyModifiers::NONE) => buffer.move_cursor_right(),
+        _ => {}
+    };
+    Ok(true)
+}
 
 fn render_editor(buffer: &Buffer) -> Paragraph {
     let content = buffer.lines()
@@ -91,34 +126,3 @@ fn render_editor(buffer: &Buffer) -> Paragraph {
     Paragraph::new(content)
         .block(Block::default().title("Editor").borders(Borders::ALL))
 }
-
-fn handle_input(buffer: &mut Buffer) -> Result<bool, std::io::Error> {
-    if event::poll(std::time::Duration::from_millis(100))? {
-        if let Event::Key(key_event) = event::read()? {
-            if key_event.kind == KeyEventKind::Press {
-                return key_handler(buffer, &key_event);
-            }
-        }
-    }
-    Ok(true)
-}
-
-fn key_handler(buffer: &mut Buffer, event: &KeyEvent) -> Result<bool, std::io::Error> {
-    match event.code {
-        KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
-            // return Err(Error::new(io::ErrorKind::Interrupted, "Quit editor!"));
-            return Ok(false)
-        },
-        KeyCode::Char(c) => buffer.insert_char(c),
-        KeyCode::Enter => buffer.insert_empty_line(),
-        KeyCode::Backspace => buffer.rm_char_backspace(),
-        KeyCode::Delete => buffer.rm_char_delete(),
-        KeyCode::Up => buffer.move_cursor_up(),
-        KeyCode::Down => buffer.move_cursor_down(),
-        KeyCode::Left => buffer.move_cursor_left(),
-        KeyCode::Right => buffer.move_cursor_right(),
-        _ => {}
-    };
-    Ok(true)
-}
-
