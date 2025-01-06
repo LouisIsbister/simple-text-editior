@@ -10,11 +10,11 @@ use tui::{
     Terminal
 };
 
-use crate::ebuffer::EBuffer;
-use crate::estate::EState;
+use crate::text_buffer::TBuffer;
+use crate::editor_state::EState;
 
 pub struct Editor {
-    buffer: EBuffer,
+    buffer: TBuffer,
     editor_state: EState,
     terminal: Terminal<CrosstermBackend<Stdout>>,
     column_cache: Option<usize>,    // if you press up/down continuosly, snap to the column you start from
@@ -23,7 +23,7 @@ pub struct Editor {
 impl Editor {
 
     pub fn new() -> crossterm::Result<Self> {
-        let buffer = EBuffer::new();
+        let buffer = TBuffer::new();
         let stdout = std::io::stdout();
         let backend = CrosstermBackend::new(stdout);
         let terminal = Terminal::new(backend)?;

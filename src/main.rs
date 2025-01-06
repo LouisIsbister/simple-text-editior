@@ -1,6 +1,6 @@
 mod editor;
-mod ebuffer;
-mod estate;
+mod text_buffer;
+mod editor_state;
 
 use editor::Editor;
 
