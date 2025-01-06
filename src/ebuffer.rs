@@ -16,9 +16,12 @@ impl EBuffer {
         }
     }
 
-    pub fn lines(&self) -> &Vec<String> {
-        &self.lines
-    }
+    // pub fn lines(&self) -> &Vec<String> {
+    //     &self.lines
+    // }
+    // pub fn line_count(&self) -> usize {
+    //     self.lines.len()
+    // }
 
     pub fn cursor_x(&self) -> usize {
         self.cx
@@ -95,27 +98,35 @@ impl EBuffer {
         }
     }
 
-    pub fn move_cursor_up(&mut self) {
+    pub fn move_cursor_up(&mut self, column_cache: &mut Option<usize>) {
         if self.cy > 0 {
             self.cy -= 1;
             let new_line_buffer = &self.lines[self.cy];
 
-            // only update x if the prev line is longer than the newline
-            if self.cx > new_line_buffer.len() {
-                self.cx = new_line_buffer.len()
-            }
+            self.cx = self.get_and_update_cached_x(column_cache, &new_line_buffer);
         }
     }
 
-    pub fn move_cursor_down(&mut self) {
+    pub fn move_cursor_down(&mut self, column_cache: &mut Option<usize>) {
         if self.cy < self.lines.len() - 1 {
             self.cy += 1;
             let new_line_buffer = &self.lines[self.cy];
-            // only update x if the prev line is longer than the newline
-            if self.cx > new_line_buffer.len() {
-                self.cx = new_line_buffer.len()
-            }
+            
+            self.cx = self.get_and_update_cached_x(column_cache, &new_line_buffer);
         }
+    }
+
+    /// Computes the cursors next X position based upon the cached cursor X value stored 
+    /// in the editor buffer (EBuffer). This is helpful when you repeatedly moving either 
+    /// 'up' or 'down'. The result is that the cursor tries to get as close as possible to 
+    /// the column it started on. If you are moving to a shorter line if will go to the 
+    /// end of the line. Otherwise it will move to the orginal column, but on the newline!
+    fn get_and_update_cached_x(&self, column_cache: &mut Option<usize>, next_row: &String) -> usize {
+        if column_cache.is_none() {
+            *column_cache = Some(self.cx)
+        }
+
+        usize::min(column_cache.unwrap(), next_row.len())
     }
 
     pub fn move_cursor_left(&mut self) {
@@ -135,6 +146,16 @@ impl EBuffer {
             // wrap the cursor to the start of the next line
             self.cy += 1;
             self.cx = 0
+        }
+    }
+
+    pub fn display_lines(&self, num_lines_to_display: usize) -> (&[String], usize) {
+        match self.lines.len() > num_lines_to_display {
+            true => {
+                let start = self.lines.len() - num_lines_to_display;
+                (&self.lines[start..], start)
+            },
+            false => (&self.lines, 0)
         }
     }
 

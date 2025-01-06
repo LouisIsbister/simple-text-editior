@@ -1,5 +1,6 @@
 mod editor;
 mod ebuffer;
+mod estate;
 
 use editor::Editor;
 
