@@ -4,18 +4,22 @@ use crossterm::event::{
 };
 use tui::{
     backend::CrosstermBackend, 
-    layout::{Constraint, Direction, Layout}, 
-    text::{Span, Spans}, 
+    layout::{Constraint, Direction, Layout},
     widgets::{Block, Borders, Paragraph}, 
     Terminal
 };
 
-use crate::text_buffer::TBuffer;
-use crate::editor_state::EState;
+use crate::{
+    text_buffer::TedBuffer,
+    editor_state::TedState,
+    renderer,
+};
+
+pub(crate) const CURSOR_X_OFFSET: usize = 5;
 
 pub struct Editor {
-    buffer: TBuffer,
-    editor_state: EState,
+    buffer: TedBuffer,
+    editor_state: TedState,
     terminal: Terminal<CrosstermBackend<Stdout>>,
     column_cache: Option<usize>,    // if you press up/down continuosly, snap to the column you start from
 }
@@ -23,21 +27,20 @@ pub struct Editor {
 impl Editor {
 
     pub fn new() -> crossterm::Result<Self> {
-        let buffer = TBuffer::new();
+        let buffer = TedBuffer::new();
         let stdout = std::io::stdout();
         let backend = CrosstermBackend::new(stdout);
         let terminal = Terminal::new(backend)?;
 
         Ok(Editor { 
             buffer, 
-            editor_state: EState::Insert,
+            editor_state: TedState::Insert,
             terminal, 
             column_cache: None 
         })
     }
 
-    pub fn run(&mut self) -> crossterm::Result<()>{
-        const CURSOR_X_OFFSET: u16 = 5;
+    pub fn run(&mut self) -> crossterm::Result<()> {
 
         loop {
             if !self.handle_input()? {
@@ -63,13 +66,13 @@ impl Editor {
                 frame.render_widget(status, chunks[0]);
 
                 // Render editor
-                let editor_chunk = chunks[1];
-                let width = editor_chunk.width;
-                let height = editor_chunk.height;
+                // let editor_chunk = chunks[1];
+                let width = chunks[1].width as usize - CURSOR_X_OFFSET;
+                let height = chunks[1].height as usize;
 
-                let render_lines = self.buffer.display_lines(height as usize);
-                let editor = Editor::render_current_text_contents(render_lines, width as usize);
-                frame.render_widget(editor, chunks[1]);
+                let render_lines = renderer::render_text_buffer(&self.buffer, width, height);
+                // let editor = renderer::render_text(&render_lines);
+                frame.render_widget(render_lines, chunks[1]);
     
                 // Render status bar
                 let status = Paragraph::new(" Press 'ALT + Backspace' to quit")
@@ -78,8 +81,8 @@ impl Editor {
     
                 // set the cursor position
                 frame.set_cursor(
-                    CURSOR_X_OFFSET + self.buffer.cursor_x() as u16,
-                    u16::min(self.buffer.cursor_y() as u16, height - 1) + chunks[0].height
+                    (CURSOR_X_OFFSET + self.buffer.cursor_x()) as u16, // x
+                    u16::min(self.buffer.cursor_y() as u16, height as u16 - 1) + chunks[0].height // y
                 );
             })?;
         }
@@ -107,12 +110,12 @@ impl Editor {
 
             // CTRL + 's' 
             (KeyCode::Char(c), KeyModifiers::CONTROL) if c.to_ascii_lowercase() == 's' => {
-                self.editor_state = EState::Save
+                self.editor_state = TedState::Save
             },
 
             // if any character has been pressed with any modifiers
             (KeyCode::Char(ch), key_mod) => {
-                self.editor_state = EState::Insert;
+                self.editor_state = TedState::Insert;
                 match key_mod {
                     KeyModifiers::NONE => buffer.insert_char(ch),
                     KeyModifiers::SHIFT => buffer.insert_char(ch.to_ascii_uppercase()),
@@ -138,26 +141,4 @@ impl Editor {
         Ok(true)
     }
 
-    /// Render the lines that should be visible in the text editor.
-    /// 
-    /// TODO, if the current line is off the page, either wrap the tex onto a
-    /// new line of shift all lines to the left in the viewport!
-    fn render_current_text_contents<'a>(render_lines: (&'a [String], usize), line_width: usize) -> Paragraph<'a> {
-        let idx_offset = render_lines.1;
-        let lines: Vec<Spans> = render_lines.0
-            .iter()
-            .enumerate()
-            .map(|(idx, lbuff)| {
-                let idx_as_str = (idx + idx_offset + 1).to_string();
-                let space_count = 5 - idx_as_str.len();
-                let spaces  = " ".repeat(space_count);
-
-
-                
-                Spans::from(Span::from(format!("{}{}{}", idx_as_str, spaces, lbuff)))
-            })
-            .collect();
-
-        Paragraph::new(lines)
-    }
 }

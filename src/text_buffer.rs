@@ -1,11 +1,11 @@
 
-pub struct TBuffer {
+pub struct TedBuffer {
     lines: Vec<String>,
     cx: usize,
     cy: usize,
 }
 
-impl TBuffer {
+impl TedBuffer {
 
     /// Creates a clean text buffer
     pub fn new() -> Self {
@@ -16,19 +16,31 @@ impl TBuffer {
         }
     }
 
-    // pub fn lines(&self) -> &Vec<String> {
-    //     &self.lines
-    // }
-    // pub fn line_count(&self) -> usize {
-    //     self.lines.len()
-    // }
-
     pub fn cursor_x(&self) -> usize {
         self.cx
     }
 
     pub fn cursor_y(&self) -> usize {
         self.cy
+    }
+
+    /// Cursor X and Y methods indexed from 1 as opposed 
+    /// to being indexed from 0 (as they already are!)
+    pub fn view_cursor_x(&self) -> usize {
+        self.cx + 1
+    }
+
+    pub fn view_cursor_y(&self) -> usize {
+        self.cy + 1
+    }
+
+    /// Functions to obtain line information
+    pub fn lines(&self) -> &Vec<String> {
+        &self.lines
+    }
+
+    pub fn lines_count(&self) -> usize {
+        self.lines.len()
     }
 
     /// Inserts a newline into the current cursor position. If the cursor 
@@ -146,16 +158,6 @@ impl TBuffer {
             // wrap the cursor to the start of the next line
             self.cy += 1;
             self.cx = 0
-        }
-    }
-
-    pub fn display_lines(&self, num_lines_to_display: usize) -> (&[String], usize) {
-        match self.lines.len() > num_lines_to_display {
-            true => {
-                let start = self.lines.len() - num_lines_to_display;
-                (&self.lines[start..], start)
-            },
-            false => (&self.lines, 0)
         }
     }
 

@@ -1,5 +1,5 @@
 
 /// TODO State implementation 
-pub enum EState {
+pub enum TedState {
     Insert, Save, Command, Exit, 
 }

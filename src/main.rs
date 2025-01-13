@@ -1,5 +1,6 @@
 mod editor;
 mod text_buffer;
+mod renderer;
 mod editor_state;
 
 use editor::Editor;
