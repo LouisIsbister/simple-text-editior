@@ -3,6 +3,7 @@ pub struct TedBuffer {
     lines: Vec<String>,
     cx: usize,
     cy: usize,
+    column_cache: Option<usize>  // if you press up/down continuosly, snap to the column you start from
 }
 
 impl TedBuffer {
@@ -13,6 +14,7 @@ impl TedBuffer {
             lines: vec![String::new()],
             cx: 0,
             cy: 0,
+            column_cache: None
         }
     }
 
@@ -22,6 +24,10 @@ impl TedBuffer {
 
     pub fn cursor_y(&self) -> usize {
         self.cy
+    }
+
+    pub fn column_cache(&self) -> &Option<usize> {
+        &self.column_cache
     }
 
     /// Cursor X and Y methods indexed from 1 as opposed 
@@ -41,6 +47,10 @@ impl TedBuffer {
 
     pub fn lines_count(&self) -> usize {
         self.lines.len()
+    }
+
+    pub fn reset_column_cache(&mut self) {
+        self.column_cache = None
     }
 
     /// Inserts a newline into the current cursor position. If the cursor 
@@ -110,21 +120,17 @@ impl TedBuffer {
         }
     }
 
-    pub fn move_cursor_up(&mut self, column_cache: &mut Option<usize>) {
-        if self.cy > 0 {
+    pub fn move_cursor_up(&mut self) {
+        if self.cy > 0 { 
             self.cy -= 1;
-            let new_line_buffer = &self.lines[self.cy];
-
-            self.cx = self.get_and_update_cached_x(column_cache, &new_line_buffer);
+            self.cx = self.get_and_update_cached_x();
         }
     }
 
-    pub fn move_cursor_down(&mut self, column_cache: &mut Option<usize>) {
+    pub fn move_cursor_down(&mut self) {
         if self.cy < self.lines.len() - 1 {
             self.cy += 1;
-            let new_line_buffer = &self.lines[self.cy];
-            
-            self.cx = self.get_and_update_cached_x(column_cache, &new_line_buffer);
+            self.cx = self.get_and_update_cached_x();
         }
     }
 
@@ -133,12 +139,13 @@ impl TedBuffer {
     /// 'up' or 'down'. The result is that the cursor tries to get as close as possible to 
     /// the column it started on. If you are moving to a shorter line if will go to the 
     /// end of the line. Otherwise it will move to the orginal column, but on the newline!
-    fn get_and_update_cached_x(&self, column_cache: &mut Option<usize>, next_row: &String) -> usize {
-        if column_cache.is_none() {
-            *column_cache = Some(self.cx)
+    fn get_and_update_cached_x(&mut self) -> usize {
+        if self.column_cache.is_none() {
+            self.column_cache = Some(self.cx)
         }
 
-        usize::min(column_cache.unwrap(), next_row.len())
+        let next_row_len = self.lines[self.cy].len();
+        usize::min(self.column_cache.unwrap(), next_row_len)
     }
 
     pub fn move_cursor_left(&mut self) {
